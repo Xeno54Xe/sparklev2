@@ -23,6 +23,26 @@ if os.path.exists(EARNINGS_OUTPUTS):
     app.mount("/data", StaticFiles(directory=EARNINGS_OUTPUTS), name="earnings-data")
 
 
+def find_company_folder(company: str) -> str | None:
+    """Find the exact outputs folder for a company by exact then case-insensitive match."""
+    if not os.path.isdir(EARNINGS_OUTPUTS):
+        return None
+    needle = company.lower().replace("_", " ").strip()
+    exact = None
+    partial = None
+    for entry in os.listdir(EARNINGS_OUTPUTS):
+        if not os.path.isdir(os.path.join(EARNINGS_OUTPUTS, entry)):
+            continue
+        entry_lower = entry.lower()
+        if entry_lower == needle:
+            return entry          # exact match wins immediately
+        if needle in entry_lower and exact is None:
+            partial = entry
+        elif entry_lower in needle and exact is None:
+            partial = partial or entry
+    return partial
+
+
 @app.get("/")
 def home():
     return {"message": "SparkleAI v4.0", "companies": 49, "total_analyses": 231}
@@ -69,6 +89,41 @@ def get_manifest():
         with open(p, "r", encoding="utf-8") as f:
             return json.load(f)
     return {"error": "Manifest not found"}
+
+@app.get("/fundamental/{company}/list")
+def list_company_reports(company: str):
+    """Return available Earnings Calls (EC) and Annual Reports (AR) for a company."""
+    folder = find_company_folder(company)
+    if not folder:
+        return {"company": company, "earnings_calls": [], "annual_reports": []}
+
+    def _periods(cat: str):
+        path = os.path.join(EARNINGS_OUTPUTS, folder, cat)
+        if not os.path.isdir(path):
+            return []
+        return sorted(
+            [p for p in os.listdir(path) if os.path.isdir(os.path.join(path, p))],
+            reverse=True
+        )
+
+    return {
+        "company": folder,
+        "earnings_calls": [{"period": p, "label": p} for p in _periods("EC")],
+        "annual_reports":  [{"period": p, "label": p} for p in _periods("AR")],
+    }
+
+@app.get("/fundamental/{company}/{category}/{period}")
+def get_beginner_analysis(company: str, category: str, period: str):
+    """Return beginner.json for outputs/{company}/{category}/{period}/."""
+    folder = find_company_folder(company)
+    if not folder:
+        return {"error": f"Company '{company}' not found"}
+    cat = category.upper()
+    fp = os.path.join(EARNINGS_OUTPUTS, folder, cat, period, "beginner.json")
+    if not os.path.exists(fp):
+        return {"error": f"No data for {company} / {category} / {period}"}
+    with open(fp, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 @app.get("/fundamental/{company}")
 def get_company_analyses(company: str):
@@ -118,6 +173,37 @@ def get_quarter_analysis(company: str, quarter_fy: str):
                 result["fiscal_year"] = entry.get("fiscal_year")
                 break
     return result
+
+
+# ═══ REPORTS LIST ═══
+
+@app.get("/reports/list")
+def list_reports():
+    """Recursively scan outputs/ for report.pdf files and return metadata + URL."""
+    reports = []
+    if not os.path.isdir(EARNINGS_OUTPUTS):
+        return {"total": 0, "reports": []}
+    for company in sorted(os.listdir(EARNINGS_OUTPUTS)):
+        company_path = os.path.join(EARNINGS_OUTPUTS, company)
+        if not os.path.isdir(company_path):
+            continue
+        for category in ("EC", "AR"):
+            cat_path = os.path.join(company_path, category)
+            if not os.path.isdir(cat_path):
+                continue
+            for period in sorted(os.listdir(cat_path)):
+                period_path = os.path.join(cat_path, period)
+                if not os.path.isdir(period_path):
+                    continue
+                if os.path.exists(os.path.join(period_path, "report.pdf")):
+                    pdf_url = f"/data/{urllib.request.quote(company)}/{category}/{urllib.request.quote(period)}/report.pdf"
+                    reports.append({
+                        "company_name": company,
+                        "category": category,
+                        "period": period,
+                        "pdf_url": pdf_url,
+                    })
+    return {"total": len(reports), "reports": reports}
 
 
 # ═══ NEW: METRICS ENDPOINTS ═══

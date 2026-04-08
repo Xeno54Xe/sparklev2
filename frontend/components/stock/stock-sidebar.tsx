@@ -8,9 +8,7 @@ import {
   Sparkles,
   LineChart,
   DollarSign,
-  FileSpreadsheet,
   TrendingUp,
-  CreditCard,
   ArrowLeft,
   Menu,
   X
@@ -22,9 +20,7 @@ const stockNavItems = [
   { icon: Sparkles, label: "Sparkle Intelligence", href: "/intelligence" },
   { icon: LineChart, label: "Charts", href: "/charts" },
   { icon: DollarSign, label: "Prices", href: "/prices" },
-  { icon: FileSpreadsheet, label: "Financials", href: "/financials" },
   { icon: TrendingUp, label: "Estimates", href: "/estimates" },
-  { icon: CreditCard, label: "Credit Analysis", href: "/credit-analysis" },
 ]
 
 export function StockSidebar() {

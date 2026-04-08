@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Frontend (Next.js)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "frontend",
+      "port": 3000
+    },
+    {
+      "name": "Backend (FastAPI / uvicorn)",
+      "runtimeExecutable": "C:/Users/lenovo/Desktop/sparkle-ready/integrated-backend/venv/Scripts/uvicorn.exe",
+      "runtimeArgs": ["main:app", "--reload", "--port", "8000"],
+      "cwd": "integrated-backend",
+      "port": 8000
+    }
+  ]
+}
